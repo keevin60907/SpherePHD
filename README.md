@@ -1,2 +1,2 @@
-# Sphere_PHD
+# SpherePHD
 Reproduce SpherePHD with python codes
