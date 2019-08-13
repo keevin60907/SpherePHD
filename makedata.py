@@ -97,7 +97,7 @@ def construct_triangle(img, vertex, division, layer, upwards=True):
                 cnt += 1
         return ret
 
-def pano2icosa(pano_pic, division=3, output_mat=None):
+def pano2icosa(pano_pic, division=3, output_mat=''):
     '''
     main function of transormation, and save the matrix as output_mat
 
@@ -133,7 +133,7 @@ def pano2icosa(pano_pic, division=3, output_mat=None):
 
         cnt = cnt + 4**division
 
-    if output_mat != None:
+    if output_mat != '':
         np.save(output_mat, icosahedron)
     else:
         np.save(pano_pic[:-4]+'.npy', icosahedron)
