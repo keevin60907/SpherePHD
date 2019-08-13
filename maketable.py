@@ -135,13 +135,64 @@ def make_adjacency_table(subdivision):
     adj_table = np.array(adj_table)
     return adj_table
 
+def merge_row(list1, list2):
+    '''
+    merge two list in staggered form, which len(list2) > len(list1):
+    new_list = [list2[0], list1[0], list2[1], list1[1], list2[2]...]
+
+    Args:
+        list1(list), list2(list)    : with pooling_index in each row
+
+    Returns:
+        ret(list)                   : new list with context shown above
+    '''
+    ret = []
+    for idx, _ in enumerate(list2):
+        ret.append(list2[idx])
+        if idx < len(list1):
+            ret.append(list1[idx])
+    return ret
+
+def make_pooling_table(subdivision):
+    '''
+    make the pooling table for the icosahedron points
+
+    Args:
+        subdivision(int)    : how many subpixels in the triangle of each face
+
+    Returns:
+        pooling_table(list) : list contain each pooling indecies for every subdivision case
+                              pooling_table[0] is for subdivision = 1
+                              pooling_table[1] is for subdivision = 2 ... and so on
+    '''
+    pooling_table = []
+    for i in range(1, subdivision+1):
+        sub_table = []
+        for layer in range(0, 2 ** i, 2):
+            upper_row = range(layer**2 + 2, (layer+1)**2, 4)
+            lower_row = range((layer+1)**2 + 1, (layer+2)**2, 4)
+            pooling_row = merge_row(upper_row, lower_row)
+            sub_table.extend(pooling_row)
+        buf = np.array(sub_table)
+
+        for face in range(1, 20):
+            sub_table = np.concatenate([sub_table, buf + face*(4**(i))], axis=0)
+        sub_table = sub_table.astype(int)
+        pooling_table.append(sub_table)
+    return pooling_table
+
 def main():
     '''
     for testing only...
     '''
     table_1 = make_adjacency_table(1)
+    print(table_1.shape)
     table_2 = make_adjacency_table(2)
+    print(table_2.shape)
     table_7 = make_adjacency_table(7)
+    print(table_7.shape)
+    pooling_table = make_pooling_table(7)
+    print(len(pooling_table))
 
 if __name__ == '__main__':
     main()
