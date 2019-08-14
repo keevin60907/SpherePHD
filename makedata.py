@@ -63,6 +63,7 @@ def construct_triangle(img, vertex, division, layer, upwards=True):
     step = (theta_max-theta_min) / (2**division)
     # theta_interval split the theta range in evenly-angled
     theta_interval = np.arange(2**division)*step + theta_min
+    theta_interval = theta_interval[::-1]
     ret = np.zeros((4**division, 3))
     cnt = 0
 
@@ -70,7 +71,7 @@ def construct_triangle(img, vertex, division, layer, upwards=True):
         for i, theta in enumerate(theta_interval):
             phi_max = i / (2**division) * (pi * 1/5)
             # phi_range ~ [vertex-phi_max, vertex+phi_max]
-            phi_range = np.arange(2*i + 1) - 1
+            phi_range = np.arange(2*i + 1) - i
             if np.max(phi_range) != 0:
                 phi_range = phi_range / np.max(phi_range) * phi_max + vertex
             else:
@@ -133,16 +134,30 @@ def pano2icosa(pano_pic, division=3, output_mat=''):
 
         cnt = cnt + 4**division
 
-    if output_mat != '':
-        np.save(output_mat, icosahedron)
+    if output_mat == '':
+        return icosahedron
     else:
-        np.save(pano_pic[:-4]+'.npy', icosahedron)
+        np.save(output_mat, icosahedron)
+        return icosahedron
+
+def icosa2pano(icosahedron, subdivision, logfile, output_img):
+    scalar = 2048/pi
+    img = np.zeros((2048, 4096, 3))
+    file = open(logfile, 'r')
+    for idx, line in enumerate(file.readlines()):
+        angles = line.strip().split(',')
+        theta = float(angles[0])
+        phi = float(angles[1])
+        img[int(theta*scalar-1024)][int(phi*scalar-2048)] = icosahedron[idx]
+    cv2.imwrite(output_img, img)
 
 def main():
     '''
     for testing only..
     '''
-    pano2icosa('./equirectangular_images/1.jpg', 5)
+    #pano2icosa('/media/bl530/新增磁碟區/area_1/pano/rgb/camera_0a70cd8d4f2b48239aaa5db59719158a_office_12_frame_equirectangular_domain_rgb.png', 8)
+    data = np.load('./area_1.npy')
+    icosa2pano(data[0], 8, 'construct.log', 'reconstruct.jpg')
 
 if __name__ == '__main__':
     main()

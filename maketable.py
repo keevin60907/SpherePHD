@@ -210,7 +210,7 @@ def main():
     '''
     Construct necessary tables
     '''
-    if not os.path.exist('./tables')
+    if not os.path.exist('./tables'):
         os.mkdir('./tables')
     for i in range(1, 9):
         conv_table = make_conv_table(i)

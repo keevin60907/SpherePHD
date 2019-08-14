@@ -25,17 +25,21 @@ def conv2d(input, in_dim, out_dim, conv_table, name,
         
         return output
 
-def maxpool(x, callTable, poolTable):
+def maxpool(x, adj_table, pooling_table):
     # input = (n_batch, 1, width, n_channel)
     # Turns x into an array of shape (n_batch, 1, kernel=4, width, n_channel)
-    x = tf.gather(x, callTable, axis=2)
+    x = tf.gather(x, adj_table, axis=2)
     # squeeze the array into shape (n_batch, kernel=4, width, n_channel)
     x = tf.squeeze(x, axis=1)
     # pool_table make the subdivision-1, with size: (width/4)
     # Picks out correct pool indexes (n_batch, kernel=4, width/4, n_channel)
-    x = tf.gather(x, poolTable, axis=2)
-    # Max from pool (n_batch, 1, inWidth/4, n_channel)
+    x = tf.gather(x, pooling_table, axis=2)
+    # Max from pool (n_batch, 1, width/4, n_channel)
     x = tf.reduce_max(x, axis=1, keepdims=True)
+    return x
+
+def upsample(x):
+    x = tf.keras.layers.Upsampling2D(x, size=(1, 2))
     return x
 
 def avgpool(x):
@@ -44,14 +48,35 @@ def avgpool(x):
 
 
 def conv_net(x, conv_tables, adj_tables, pooling_tables, div):
+
     conv1 = conv2d(x, in_dim=3, out_dim=256, conv_table[div].T)
     conv1 = conv2d(conv1, in_dim=256, out_dim=256, conv_table[div].T)
     conv1 = conv2d(conv1, in_dim=256, out_dim=256, conv_table[div].T)
     conv1 = maxpool(conv1, adj_tables[div].T, pooling_tables[div - 1].T)
 
-    conv2 = conv2d(conv1, in_dim=256, out_dim=256, conv_table[div].T)
-    conv2 = conv2d(conv2, in_dim=256, out_dim=256, conv_table[div].T)
-    conv2 = conv2d(conv2, in_dim=256, out_dim=256, conv_table[div].T)
-    conv2 = maxpool(conv2, adj_tables[div].T, pooling_tables[div - 1].T)
-    out = avgpool(conv3)
+    conv2 = conv2d(conv1, in_dim=256, out_dim=256, conv_table[div-1].T)
+    conv2 = conv2d(conv2, in_dim=256, out_dim=256, conv_table[div-1].T)
+    conv2 = conv2d(conv2, in_dim=256, out_dim=256, conv_table[div-1].T)
+    conv2 = maxpool(conv2, adj_tables[div - 1].T, pooling_tables[div - 2].T)
+
+    conv3 = conv2d(conv2, in_dim=256, out_dim=256, conv_table[div-2].T)
+    conv3 = conv2d(conv3, in_dim=256, out_dim=256, conv_table[div-2].T)
+    conv3 = conv2d(conv3, in_dim=256, out_dim=256, conv_table[div-2].T)
+    conv3 = maxpool(conv3, adj_tables[div - 2].T, pooling_tables[div - 3].T)
+
+    deconv_3 = upsample(conv_3)
+    deconv_3 = conv2d(deconv_3, in_dim=256, out_dim=256, conv_table[div-3].T)
+    deconv_3 = conv2d(deconv_3, in_dim=256, out_dim=256, conv_table[div-3].T)
+    deconv_3 = conv2d(deconv_3, in_dim=256, out_dim=256, conv_table[div-3].T)
+
+    deconv_2 = upsample(deconv_3)
+    deconv_2 = conv2d(deconv_2, in_dim=256, out_dim=256, conv_table[div-3].T)
+    deconv_2 = conv2d(deconv_2, in_dim=256, out_dim=256, conv_table[div-3].T)
+    deconv_2 = conv2d(deconv_2, in_dim=256, out_dim=256, conv_table[div-3].T)
+
+    deconv_1 = upsample(deconv_2)
+    deconv_1 = conv2d(deconv_1, in_dim=256, out_dim=256, conv_table[div-3].T)
+    deconv_1 = conv2d(deconv_1, in_dim=256, out_dim=256, conv_table[div-3].T)
+    deconv_1 = conv2d(deconv_1, in_dim=256, out_dim=3, conv_table[div-3].T)
+
     return out
