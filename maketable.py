@@ -1,6 +1,7 @@
 '''
 The module is used to construct the adjcency table of the subdivision icosahedron
 '''
+import os
 import numpy as np
 
 def connect(adj_table, id1, id2):
@@ -207,14 +208,15 @@ def make_pooling_table(subdivision):
 
 def main():
     '''
-    for testing only...
+    Construct necessary tables
     '''
-    table_8 = make_adjacency_table(8)
-    print(table_8.shape)
-    conv_8 = make_conv_table(8)
-    print(conv_8.shape)
-    pooling_table = make_pooling_table(8)
-    print(len(pooling_table))
+    if not os.path.exist('./tables')
+        os.mkdir('./tables')
+    for i in range(1, 9):
+        conv_table = make_conv_table(i)
+        np.save('./tables/conv_table_'+str(i)+'.npy', conv_table)
+        pooling_table = make_pooling_table(i)
+        np.save('./tables/pooling_table_'+str(i)+'.npy', pooling_table)
 
 if __name__ == '__main__':
     main()
