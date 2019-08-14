@@ -135,6 +135,30 @@ def make_adjacency_table(subdivision):
     adj_table = np.array(adj_table)
     return adj_table
 
+def make_conv_table(subdivision):
+    '''
+    use the adjacency table to the make a step=2 convolution table
+
+    Args:
+        subdividion(int)    : how many points on the icosahedron projection
+
+    Returns:
+        conv_table(np.array): the table with 2 step adjacent points
+    '''
+    adj_table = make_adjacency_table(subdivision)
+    conv_table = []
+    
+    for origin in range(adj_table.shape[0]):
+        tmp = list(adj_table[origin])
+        for i in [1, 2, 3]:
+            step1 = tmp[i]
+            for step2 in adj_table[step1]:
+                if  step2 != step1 and step2 != origin:
+                    tmp.append(step2)
+        conv_table.append(tmp)
+
+    return np.array(conv_table)
+
 def merge_row(list1, list2):
     '''
     merge two list in staggered form, which len(list2) > len(list1):
@@ -185,13 +209,11 @@ def main():
     '''
     for testing only...
     '''
-    table_1 = make_adjacency_table(1)
-    print(table_1.shape)
-    table_2 = make_adjacency_table(2)
-    print(table_2.shape)
-    table_7 = make_adjacency_table(7)
-    print(table_7.shape)
-    pooling_table = make_pooling_table(7)
+    table_8 = make_adjacency_table(8)
+    print(table_8.shape)
+    conv_8 = make_conv_table(8)
+    print(conv_8.shape)
+    pooling_table = make_pooling_table(8)
     print(len(pooling_table))
 
 if __name__ == '__main__':
