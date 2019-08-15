@@ -19,9 +19,9 @@ def conv2d(input, in_dim, out_dim, conv_table, name,
         # squeeze the array into shape (n_batch, kernel=10, width, n_channel)
         x = tf.squeeze(x, axis=1)
         output = tf.nn.conv2d(x, weight, [1, stride, stride, 1], padding) + bias
-        
         if activation == 'relu':
             output = tf.nn.leaky_relu(output)
+        output = tf.layers.batch_normalization(output)
         
         return output
 
