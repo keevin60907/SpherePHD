@@ -11,7 +11,7 @@ class DataLoader():
         # Process the panoramic picture
         self.dataset = []
         cnt = 0;
-        for file in os.listdir(dir_path):
+        for file in sorted(os.listdir(dir_path)):
             if file[-4:] == '.png' or file[-4:] == '.jpg':
                 # subdivision defualt = 8
                 self.dataset.append(pano2icosa(os.path.join(dir_path, file), subdivision))
