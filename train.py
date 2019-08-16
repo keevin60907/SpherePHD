@@ -27,8 +27,8 @@ class SpherePHD():
 
 
         self.num_epochs = 150
-        self.num_steps = 1200
-        self.batch_size = 50
+        self.num_steps = 3000
+        self.batch_size = 20
         self.X = tf.placeholder(tf.float32, [None, 1, 20 * 4**subdivision, 1])
         self.Y = tf.placeholder(tf.float32, [None, NUM_CLASS])
 
@@ -36,7 +36,7 @@ class SpherePHD():
         self.prediction = tf.nn.softmax(self.logits)
 
         self.loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logits, labels=self.Y))
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=0.00005)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=0.0001)
         self.train_op = self.optimizer.minimize(self.loss_op)
 
         # Evaluate model
@@ -94,7 +94,7 @@ class SpherePHD():
         total_accuracy = 0
         for idx in range(1,2):
             test_images, test_labels = loadTestData(idx)
-            for step in range(1, 201):
+            for step in range(1, 501):
                 batch_x, batch_y = np.reshape(test_images[(step - 1) * batch_size:step * batch_size].astype(np.float32),
                                               [batch_size, 1, 1280, 1]), test_labels[
                                               (step - 1) * batch_size:step * batch_size].astype(np.float32)
@@ -106,7 +106,7 @@ class SpherePHD():
 
 def main():
     MNIST = SpherePHD(SUBDIVSION)
-    MNIST.train()
+    #MNIST.train()
     MNIST.test()
 
 if __name__ == '__main__':

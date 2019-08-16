@@ -17,6 +17,17 @@ def connect(adj_table, id1, id2):
     if id1 not in adj_table[id2]:
         adj_table[id2].append(id1)
 
+def single_connect(adj_table, id1, id2):
+    '''
+    connect two pixel on sphere
+
+    Args:
+        adj_table(list[list])   : the adjacent table
+        id1(int), id2(int)      : the ids we want to connect together
+    '''
+    if id2 not in adj_table[id1]:
+        adj_table[id1].append(id2)
+
 def edge_connect(adj_table, subdivision, face1, face2, staggered=False):
     '''
     the function connect the point on the edse of two faces,
@@ -34,7 +45,7 @@ def edge_connect(adj_table, subdivision, face1, face2, staggered=False):
         face1_right_edge = [pixel_in_face*face1 + (i+1)**2 - 1 for i in range(edge_length)]
         face2_left_edge = [pixel_in_face*face2 + i**2 for i in range(edge_length)]
         for layer in range(edge_length):
-            connect(adj_table, face1_right_edge[layer], face2_left_edge[layer])
+            single_connect(adj_table, face1_right_edge[layer], face2_left_edge[layer])
     elif face1 < 10:
         face1_left_edge = [pixel_in_face*face1 + i**2 for i in range(edge_length)]
         face2_left_edge = [pixel_in_face*face2 + i**2 for i in range(edge_length)]
@@ -46,7 +57,7 @@ def edge_connect(adj_table, subdivision, face1, face2, staggered=False):
         for layer in range(edge_length):
             connect(adj_table, face1_right_edge[layer], face2_right_edge[edge_length-layer-1])
 
-def make_inner_link(adj_table, subdivision):
+def make_vertical_inner_link(adj_table, subdivision):
     '''
     find the vertical and horizontal connections
 
@@ -70,13 +81,36 @@ def make_inner_link(adj_table, subdivision):
                 # find the vertical connection
                 if start_id + point + 2*(layer+1) < end_id:
                     connect(adj_table, start_id + point, start_id + point + 2*(layer+1))
+    return adj_table
+
+def make_horizontal_inner_link(adj_table, subdivision):
+    '''
+    find the vertical and horizontal connections
+
+    eg. subdivision = 2
+             00             ... Layer 0
+          01 02 03          ... Layer 1
+       04 05 06 07 08       ... Layer 2
+    09 10 11 12 13 14 15    ... Layer 3
+
+    Vertical Connection     : 00--02, 01--05, 03--07...
+    Horizontal Connection   : [01--02, 02--03], [04--05, 05--06]...
+    '''
+    for face in range(20):
+        # number order is the same for each face,
+        # so we only need to shift the points by 4**subdivision
+        start_id = face*(4**subdivision)
+        end_id = (face+1)*(4**subdivision)
+        for layer in range(2**subdivision):
+            row = range(layer**2, (layer+1)**2, 2)
+            for point in row:
                 # find the horizontal connection
                 if (point + 1) < (layer+1)**2:
                     connect(adj_table, start_id + point, start_id + point + 1)
-                    connect(adj_table, start_id + point + 1, start_id + point + 2)
+                    single_connect(adj_table, start_id + point + 1, start_id + point + 2)
     return adj_table
 
-def make_edge_link(adj_table, subdivision):
+def make_vertical_edge_link(adj_table, subdivision):
     '''
     find the horizontal connection, and other edge connections
 
@@ -105,15 +139,44 @@ def make_edge_link(adj_table, subdivision):
             shifted_bottom = pixel_in_face*10 + pixel_in_face*face + pixel
             connect(adj_table, shifted_bottom, shifted_bottom + max_diff - 4 * (i % edge_length))
 
+    return adj_table
+
+def make_horizontal_edge_link(adj_table, subdivision):
+    '''
+    find the horizontal connection, and other edge connections
+
+    eg. the expanded view of icosahedron
+    00    01    02    03    04      _____ Horizontal Connection 1
+    05 10 06 11 07 12 08 13 09 14   _____
+       15    16    17    18    19         Horizontal Connection 2
+
+    Horizontal Connection   : 00--05, 01--06, 02--07, 10--15...
+    Edges Connection        : 00--01, 01--02, 05--10, 15--16...
+    '''
+    edge_length = 2**subdivision
+    pixel_in_face = 4**subdivision
+    left_point = (2**subdivision-1)**2
+    right_point = 4**subdivision - 1
+    # left point of face_0 connect to right point of face_5
+    # 5*4^s + (4^s - 1) - (4^s - 2*2^s + 1) = 5*4^s + 2*2^s - 2
+    max_diff = 5 * 4**subdivision + 2 * 2**subdivision - 2
+
     for i in range(5):
         # five triangles in top layer
         edge_connect(adj_table, subdivision, i, (i+1)%5)
         # ten staggered triangles in middle layer
-        edge_connect(adj_table, subdivision, 5+i, 10+i, True)
         edge_connect(adj_table, subdivision, 10+i, 5+(i+1)%5, True)
+        edge_connect(adj_table, subdivision, 5+i, 10+i, True)
         # five triangles in bottom layer
         edge_connect(adj_table, subdivision, 15+(i+1)%5, 15+i)
 
+    return adj_table
+
+def complete_table(adj_table):
+    for idx, vertex_info in enumerate(adj_table):
+        for vertex in vertex_info:
+            if idx not in adj_table[vertex]:
+                adj_table[vertex].append(idx)
     return adj_table
 
 def make_adjacency_table(subdivision):
@@ -131,8 +194,11 @@ def make_adjacency_table(subdivision):
                               the ith row means the other 3 points are linked to the point i
     '''
     adj_table = [[i] for i in range(20*(4**subdivision))]
-    adj_table = make_inner_link(adj_table, subdivision)
-    adj_table = make_edge_link(adj_table, subdivision)
+    adj_table = make_vertical_inner_link(adj_table, subdivision)
+    adj_table = make_vertical_edge_link(adj_table, subdivision)
+    adj_table = make_horizontal_inner_link(adj_table, subdivision)
+    adj_table = make_horizontal_edge_link(adj_table, subdivision)
+    adj_table = complete_table(adj_table)
     adj_table = np.array(adj_table)
     return adj_table
 
@@ -215,8 +281,8 @@ def main():
     for i in range(1, 9):
         conv_table = make_conv_table(i)
         np.save('./tables/conv_table_'+str(i)+'.npy', conv_table)
-        pooling_table = make_pooling_table(i)
-        np.save('./tables/pooling_table_'+str(i)+'.npy', pooling_table)
+    pooling_table = make_pooling_table(3)
+    np.save('./tables/pooling_table_'+str(i)+'.npy', pooling_table)
 
 if __name__ == '__main__':
     main()

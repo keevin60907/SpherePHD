@@ -8,7 +8,7 @@ def conv2d(input, in_dim, out_dim, conv_table, name,
     with tf.variable_scope(name, reuse= reuse):
         weight = tf.get_variable('weight', 
                      shape= shape, 
-                     initializer= tf.truncated_normal_initializer(stddev=0.02))
+                     initializer = tf.contrib.layers.xavier_initializer())
         bias = tf.get_variable('bias', 
                      shape= shape[-1], 
                      initializer= tf.constant_initializer(0))
@@ -21,7 +21,6 @@ def conv2d(input, in_dim, out_dim, conv_table, name,
         output = tf.nn.conv2d(x, weight, [1, stride, stride, 1], padding) + bias
         if activation == 'relu':
             output = tf.nn.leaky_relu(output)
-        output = tf.layers.batch_normalization(output)
         
         return output
 
