@@ -272,17 +272,41 @@ def make_pooling_table(subdivision):
         pooling_table.append(sub_table)
     return pooling_table
 
+def make_upsample_table(pooling_table, adj_table):
+    '''
+    make upsampling table from pooling table and adjacent table
+
+    Args:
+        pooling_table(np.array) : the i+1 subdivision pooling table
+        adj_table(np.array)     : the i+1 subdivision adjacent table
+
+    Returns:
+        upsample_table(np.array): the new order for the uppooling matrix
+    '''
+    upsample = np.zeros((pooling_table.shape[0], 4))
+    for idx, vertex in enumerate(pooling_table):
+        upsample[idx, :] = adj_table[vertex]
+    upsample = upsample.reshape(-1, 1)
+    order = range(upsample.shape[0])
+    tmp = zip(order, upsample)
+    tmp = sorted(tmp, key=lambda x: x[1])
+    upsample_table, _ = zip(*tmp)
+    return np.array(upsample_table)
+
 def main():
     '''
     Construct necessary tables
     '''
-    if not os.path.exist('./tables'):
-        os.mkdir('./tables')
-    for i in range(1, 9):
-        conv_table = make_conv_table(i)
-        np.save('./tables/conv_table_'+str(i)+'.npy', conv_table)
-    pooling_table = make_pooling_table(3)
-    np.save('./tables/pooling_table_'+str(i)+'.npy', pooling_table)
+    #if not os.path.exist('./tables'):
+        #os.mkdir('./tables')
+    #for i in range(1, 9):
+        #conv_table = make_conv_table(i)
+        #np.save('./tables/conv_table_'+str(i)+'.npy', conv_table)
+    pooling_table = make_pooling_table(1)
+    #np.save('./tables/pooling_table_'+str(i)+'.npy', pooling_table)
+    adj_table = make_adjacency_table(1)
+    upsample_table = make_upsample_table(pooling_table[0], adj_table)
+
 
 if __name__ == '__main__':
     main()

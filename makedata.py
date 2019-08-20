@@ -9,9 +9,14 @@ from math import pi
 import numpy as np
 import cv2
 
+#LOG_FILE = open('angle_info.log', 'w')
+LOG_FILE = None
 TOP_VERTEX = [pi*1/5, pi*3/5, pi, pi*7/5, pi*9/5]
 BOT_VERTEX = [0, pi*2/5, pi*4/5, pi*6/5, pi*8/5]
 THETA_RANGE = [[pi/2, pi/2-1.1071], [pi/2-1.1071, -pi/2+1.1071], [-pi/2+1.1071, -pi/2]]
+CATEGORY = np.array([[0, 0, 0], [255, 0 , 0], [255, 215, 0], [0, 255, 0], [0, 0 ,255], \
+                     [0, 51, 153], [139, 0 , 255], [128, 128, 0], [0, 0 ,128], [255, 229, 180],\
+                     [255, 192, 203], [255, 127, 80], [204, 85, 0], [80, 200, 120]])
 
 def get_pixel(img, theta, phi):
     '''
@@ -40,7 +45,11 @@ def get_pixel(img, theta, phi):
     else:
         pixel_x = radius*phi + img.shape[1]/2
 
-    return img[int(pixel_y)][int(pixel_x)]
+    if LOG_FILE == None:
+        return img[int(pixel_y)][int(pixel_x)]
+    else:
+        print('%f,%f' %(theta, phi), file=LOG_FILE)
+        return img[int(pixel_y)][int(pixel_x)]
 
 def construct_triangle(img, vertex, division, layer, upwards=True):
     '''
@@ -62,9 +71,9 @@ def construct_triangle(img, vertex, division, layer, upwards=True):
     theta_min = THETA_RANGE[layer][1]
     step = (theta_max-theta_min) / (2**division)
     # theta_interval split the theta range in evenly-angled
-    theta_interval = np.arange(2**division)*step + theta_min
+    theta_interval = np.arange(2**division)*step + theta_min + step/3
     theta_interval = theta_interval[::-1]
-    ret = np.zeros((4**division, 3))
+    ret = np.zeros((4**division, img.shape[2]))
     cnt = 0
 
     if upwards:
@@ -98,20 +107,19 @@ def construct_triangle(img, vertex, division, layer, upwards=True):
                 cnt += 1
         return ret
 
-def pano2icosa(pano_pic, division=3, output_mat=''):
+def pano2icosa(img, division=3, output_mat=''):
     '''
     main function of transormation, and save the matrix as output_mat
 
     Args:
-        pano_pic(str)   : the file path for load-in the original picture
+        img(np.array)   : the file path for load-in the original picture
         output_mat(str) : the file path for saving the transformed matrix in format of '.npy'
         division(int)   : how much subdivision should be applied
 
     Returns:
         None
     '''
-    img = cv2.imread(pano_pic)
-    icosahedron = np.zeros((20*(4**division), 3))
+    icosahedron = np.zeros((20*(4**division), img.shape[2]))
     cnt = 0
 
     for face in range(20):
@@ -134,30 +142,44 @@ def pano2icosa(pano_pic, division=3, output_mat=''):
 
         cnt = cnt + 4**division
 
-    if output_mat == '':
-        return icosahedron
-    else:
+    if output_mat != '':
         np.save(output_mat, icosahedron)
-        return icosahedron
+    if LOG_FILE:
+        LOG_FILE.close()
+    return icosahedron
 
-def icosa2pano(icosahedron, subdivision, logfile, output_img):
-    scalar = 2048/pi
-    img = np.zeros((2048, 4096, 3))
+def icosa2pano(icosahedron, logfile, output_img, paint_seg=False):
+    scalar = 200/pi
+    img = np.zeros((200, 400, 3))
     file = open(logfile, 'r')
     for idx, line in enumerate(file.readlines()):
         angles = line.strip().split(',')
         theta = float(angles[0])
         phi = float(angles[1])
-        img[int(theta*scalar-1024)][int(phi*scalar-2048)] = icosahedron[idx]
+        if paint_seg:
+            cate = np.argmax(icosahedron[idx])
+            img[int(theta*scalar-100)][int(phi*scalar-200)] = CATEGORY[cate]
+        else:
+            img[int(theta*scalar-100)][int(phi*scalar-200)] = icosahedron[idx]
     cv2.imwrite(output_img, img)
 
 def main():
     '''
     for testing only..
     '''
-    #pano2icosa('/media/bl530/新增磁碟區/area_1/pano/rgb/camera_0a70cd8d4f2b48239aaa5db59719158a_office_12_frame_equirectangular_domain_rgb.png', 8)
-    data = np.load('./area_1.npy')
-    icosa2pano(data[0], 8, 'construct.log', 'reconstruct.jpg')
+    #img = cv2.imread('/media/bl530/新增磁碟區/area_1/pano/rgb/camera_0a70cd8d4f2b48239aaa5db59719158a_office_12_frame_equirectangular_domain_rgb.png')
+    #icosa = pano2icosa(img, 6)
+    data = np.load('area_1_label.npy')
+    one_hot = np.zeros((data.shape[0], data.shape[1], 14))
+    for i in range(data.shape[0]):
+        for j in range(data.shape[1]):
+            one_hot[i, j, int(data[i, j])] = 1
+    gt_img = one_hot[150].reshape(-1, 14)
+    icosa2pano(gt_img, 'sub_6.log', 'reconstruct_label.jpg', paint_seg=True)
+
+    test = np.load('result_ver1.npy')
+    img = test[0].reshape(-1, 14)
+    icosa2pano(img, 'sub_6.log', 'reconstruct_test.jpg', paint_seg=True)
 
 if __name__ == '__main__':
     main()
