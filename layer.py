@@ -24,6 +24,24 @@ def conv2d(input, in_dim, out_dim, conv_table, name,
         
         return output
 
+def channel_conv(input, in_dim, out_dim, name, reuse=False, 
+                 stride=1, activation='elu', padding='VALID'):
+
+    shape = np.asarray([1, 1, in_dim, out_dim])
+    with tf.variable_scope(name, reuse= reuse):
+        weight = tf.get_variable('weight', 
+                     shape= shape, 
+                     initializer = tf.contrib.layers.xavier_initializer())
+        bias = tf.get_variable('bias', 
+                     shape= shape[-1], 
+                     initializer= tf.constant_initializer(0))
+        # input = (n_batch, 1, width, n_channel)
+        output = tf.nn.conv2d(input, weight, [1, stride, stride, 1], padding) + bias
+
+        if activation == 'elu':
+            output = tf.nn.elu(output)
+        return output
+
 def maxpool(x, adj_table, pooling_table):
 
     # input = (n_batch, 1, width, n_channel)
@@ -38,55 +56,14 @@ def maxpool(x, adj_table, pooling_table):
     x = tf.reduce_max(x, axis=1, keepdims=True)
     return x
 
-def upsample(x, adj_table, pooling_table):
+def upsample(x, upsample_table):
     # input = (n_batch, 1, width, n_channel)
-    # Turns x into an array of shape (n_batch, 1, kernel=4, width, n_channel)
-    x = tf.gather()
+    # Turns x into an array of shape (n_batch, 1, width*4, n_channel)
+    x = tf.keras.layers.UpSampling2D((1, 4))(x)
+    # unpooling shape (n_batch, 1, width*4, n_channel)
+    x = tf.gather(x, upsample_table, axis=2)
     return x
 
 def avgpool(x):
     x = tf.reduce_mean(x, axis=[1, 2])
     return x
-
-def MNIST_net(x, conv_tables, adj_tables, pooling_tables, div):
-
-    conv1 = conv2d(x, in_dim=1, out_dim=16, conv_table=conv_tables[div].T, name='conv_1')
-    pool1 = maxpool(conv1, adj_tables[div].T, pooling_tables[div-1].T)
-
-    conv2 = conv2d(pool1, in_dim=16, out_dim=32, conv_table=conv_tables[div-1].T, name='conv_2')
-    pool2 = maxpool(conv2, adj_tables[div-1].T, pooling_tables[div-2].T)
-
-    conv3 = conv2d(pool2, in_dim=32, out_dim=10, conv_table=conv_tables[div-2].T, name='conv_3')
-    out = avgpool(conv3)
-
-    return out
-
-def auto_encoder(x, conv_tables, adj_tables, pooling_tables, div):
-
-    conv1 = conv2d(x, in_dim=3, out_dim=128, conv_table=conv_tables[div].T, name='block1_conv1')
-    conv1 = conv2d(conv1, in_dim=128, out_dim=128, conv_table=conv_tables[div].T, name='block1_conv2')
-    conv1 = conv2d(conv1, in_dim=128, out_dim=128, conv_table=conv_tables[div].T, name='block1_conv3')
-    pool1 = maxpool(conv1, adj_tables[div].T, pooling_tables[div-1].T)
-
-    conv2 = conv2d(pool1, in_dim=128, out_dim=256, conv_table=conv_tables[div-1].T, name='block2_conv1')
-    conv2 = conv2d(conv2, in_dim=256, out_dim=256, conv_table=conv_tables[div-1].T, name='block2_conv2')
-    conv2 = conv2d(conv2, in_dim=256, out_dim=256, conv_table=conv_tables[div-1].T, name='block2_conv3')
-    pool2 = maxpool(conv2, adj_tables[div-1].T, pooling_tables[div-2].T)
-
-    conv3 = conv2d(pool2, in_dim=256, out_dim=512, conv_table=conv_tables[div-2].T, name='block3_conv1')
-    conv3 = conv2d(conv3, in_dim=512, out_dim=512, conv_table=conv_tables[div-2].T, name='block3_conv2')
-    conv3 = conv2d(conv3, in_dim=512, out_dim=512, conv_table=conv_tables[div-2].T, name='block3_conv3')
-    
-    upsample_1 = upsample(conv3, adj_tables[div-2].T, pooling_tables[div-3].T)
-
-    de_conv2 = conv2d(upsample_1, in_dim=512, out_dim=256, conv_table=conv_tables[div-1].T, name='block4_deconv1')
-    de_conv2 = conv2d(de_conv2, in_dim=256, out_dim=256, conv_table=conv_tables[div-1].T, name='block4_deconv2')
-    de_conv2 = conv2d(de_conv2, in_dim=256, out_dim=256, conv_table=conv_tables[div-1].T, name='block4_deconv3')
-
-    upsample_2 = upsample(de_conv2, adj_tables[div-1].T, pooling_tables[div-2].T)
-
-    de_conv1 = conv2d(upsample_2, in_dim=256, out_dim=128, conv_table=conv_tables[div].T, name='block5_deconv1')
-    de_conv1 = conv2d(de_conv1, in_dim=128, out_dim=128, conv_table=conv_tables[div].T, name='block5_deconv2')
-    de_conv1 = conv2d(de_conv1, in_dim=128, out_dim=13, conv_table=conv_tables[div].T, name='block5_deconv3')
-
-    return out
