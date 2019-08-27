@@ -8,7 +8,6 @@ import DataLoader
 from maketable import *
 from makedata import * 
 from model import *
-from loadData import *
 
 np.set_printoptions(threshold=0.1)
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
